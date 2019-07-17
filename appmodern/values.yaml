@@ -1,0 +1,81 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: pbw
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: pbw
+        solution: pot
+        id: pbw
+        version: 1.0.1
+    spec:
+      containers:
+      - name: pbw
+        image: mycluster.icp:8500/default/liberty/pbw:1.0.1
+        imagePullPolicy: Always
+        env:
+          - name: JDBC_HOST
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: host
+          - name: JDBC_PORT
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: port
+          - name: JDBC_DB
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: db
+          - name: JDBC_ID
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: id
+          - name: JDBC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db2
+                key: pwd
+---
+# Deploy the service
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+  name: pbw-service
+  labels:
+    app: pbw
+spec:
+  type: ClusterIP
+  selector:
+    app: pbw
+  ports:
+   - name: http
+     protocol: TCP
+     port: 9080
+   - name: https
+     protocol: TCP
+     port: 9443
+---
+# Configure the ingress 
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: pbw-ingress-http
+  annotations: 
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+   rules:
+   - http:
+      paths:
+      - path: /PlantsByWebSphere
+        backend:
+          serviceName: pbw-service
+          servicePort: 9080
+---
